@@ -2,7 +2,8 @@ import "server-only";
 import axios from "axios";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { sameOrigin, refreshCookie } from "./policy";
+import { refreshCookie } from "./policy";
+import { hasSameRequestOrigin } from "./request-origin";
 export const ACCESS = "vivu_admin_access";
 export const REFRESH = "vivu_admin_refresh";
 const core = axios.create({
@@ -21,6 +22,7 @@ export async function coreRequest(
   data?: unknown,
   refresh?: string,
   params?: Record<string, string>,
+  client?: { userAgent: string; clientType: "ADMIN" },
 ) {
   return core.request({
     url: path,
@@ -30,11 +32,17 @@ export async function coreRequest(
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(refresh ? { Cookie: `refresh_token=${refresh}` } : {}),
+      ...(client
+        ? {
+            "User-Agent": client.userAgent.slice(0, 512),
+            "X-Vivu-Client": client.clientType,
+          }
+        : {}),
     },
   });
 }
 export function guarded(request: NextRequest) {
-  return sameOrigin(request.url, request.headers.get("origin"));
+  return hasSameRequestOrigin(request);
 }
 export function fail(message: string, status: number) {
   return NextResponse.json(

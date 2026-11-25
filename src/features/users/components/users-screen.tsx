@@ -2,8 +2,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ChevronRight } from "lucide-react";
-import { Button } from "@/base/components/ui/button";
 import {
   Heading,
   Avatar,
@@ -15,6 +13,14 @@ import {
   Pagination,
 } from "@/base/components/layout/common";
 import useUsers from "../hooks/use-users";
+import { UserRowActions } from "./user-row-actions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/base/components/ui/select";
 export function UsersScreen() {
   const t = useTranslations();
   const [search, setSearch] = useState("");
@@ -34,22 +40,25 @@ export function UsersScreen() {
               setPage(0);
             }}
           />
-          <select
-            className="select"
-            aria-label={t("status")}
-            value={status}
-            onChange={(event) => {
-              setStatus(event.target.value);
+          <Select
+            value={status || "ALL"}
+            onValueChange={(value) => {
+              setStatus(value === "ALL" ? "" : value);
               setPage(0);
             }}
           >
-            <option value="">{t("all")}</option>
-            {["ACTIVE", "INACTIVE", "DELETED"].map((value) => (
-              <option key={value} value={value}>
-                {t(value)}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger aria-label={t("status")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">{t("all")}</SelectItem>
+              {["ACTIVE", "INACTIVE", "DELETED"].map((value) => (
+                <SelectItem key={value} value={value}>
+                  {t(value)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         {query.error ? (
           <ErrorState retry={query.refetch} />
@@ -91,12 +100,7 @@ export function UsersScreen() {
                       </span>
                     </td>
                     <td>
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={"/users/" + user.id}>
-                          {t("view")}
-                          <ChevronRight size={15} />
-                        </Link>
-                      </Button>
+                      <UserRowActions user={user} />
                     </td>
                   </tr>
                 ))}

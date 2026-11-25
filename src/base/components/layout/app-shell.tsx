@@ -7,13 +7,12 @@ import { useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   Users,
-  Monitor,
   Settings,
   ScrollText,
   LogOut,
   Menu,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/base/components/ui/toast";
 import { Brand, Preferences, Avatar, Pending } from "./common";
 import { Button } from "@/base/components/ui/button";
 import {
@@ -29,13 +28,17 @@ import type { Settings as AdminSettings } from "@/base/lib/types";
 const navigation = [
   ["/", "overview", LayoutDashboard],
   ["/users", "users", Users],
-  ["/sessions", "sessions", Monitor],
   ["/settings", "settings", Settings],
   ["/audit", "audit", ScrollText],
 ] as const;
 export function AppShell({ children }: { children: ReactNode }) {
   const t = useTranslations();
   const pathname = usePathname();
+  const isActive = (href: string) =>
+    href === "/"
+      ? pathname === "/"
+      : pathname.startsWith(href) ||
+        (href === "/users" && pathname === "/sessions");
   const { actor } = useAdmin();
   const [open, setOpen] = useState(false);
   const settings = useAdminQuery<AdminSettings>("settings");
@@ -56,14 +59,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           key={href}
           href={href}
           className="nav-link"
-          data-active={
-            href === "/" ? pathname === "/" : pathname.startsWith(href)
-          }
-          aria-current={
-            (href === "/" ? pathname === "/" : pathname.startsWith(href))
-              ? "page"
-              : undefined
-          }
+          data-active={isActive(href)}
+          aria-current={isActive(href) ? "page" : undefined}
           onClick={() => setOpen(false)}
         >
           <Icon size={19} />

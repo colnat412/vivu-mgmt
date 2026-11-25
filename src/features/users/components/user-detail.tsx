@@ -19,6 +19,8 @@ import useAdminQuery from "@/base/hooks/use-admin-query";
 import { useAdmin } from "@/base/providers/providers";
 import { request } from "@/base/api";
 import type { User } from "@/base/lib/types";
+import { UserStatusConfirmation } from "./user-status-confirmation";
+import { canChangeUserStatus, isUserDisabled } from "../lib/user-actions";
 function ProfileEditor({ user }: { user: User }) {
   const router = useRouter();
   const t = useTranslations();
@@ -30,7 +32,7 @@ function ProfileEditor({ user }: { user: User }) {
   const dirty =
     name.trim() !== user.name || email.trim() !== user.email || removeAvatar;
   return (
-    <section className="panel">
+    <section id="edit-profile" className="panel scroll-mt-6">
       <h2>{t("editProfile")}</h2>
       <form
         className="form max-w-xl"
@@ -98,10 +100,10 @@ export function UserDetail({ id }: { id: string }) {
   const t = useTranslations();
   const date = useDate();
   const query = useAdminQuery<User>("users/" + id);
-  const { actor, invalidate } = useAdmin();
+  const { actor } = useAdmin();
   const [confirm, setConfirm] = useState(false);
   const user = query.data;
-  const disabled = user?.status === "DELETED" || user?.status === "BLOCKED";
+  const disabled = user ? isUserDisabled(user) : false;
   return (
     <div className="page">
       <div>
@@ -169,7 +171,7 @@ export function UserDetail({ id }: { id: string }) {
                   {t("manageSessions")}
                 </Link>
               </Button>
-              {!user.admin && actor.id !== id && (
+              {canChangeUserStatus(user, actor.id) && (
                 <Button variant="outline" onClick={() => setConfirm(true)}>
                   <LockKeyhole size={16} />
                   {t(disabled ? "unblock" : "block")}
@@ -182,18 +184,7 @@ export function UserDetail({ id }: { id: string }) {
         </>
       )}
       {confirm && user && (
-        <ConfirmAction
-          title={t(disabled ? "unblock" : "block")}
-          hint={t(disabled ? "restoreHint" : "disabledHint")}
-          onClose={() => setConfirm(false)}
-          onConfirm={async (reason) => {
-            await request("PATCH", "/admin/users/" + id + "/status", {
-              disabled: !disabled,
-              reason,
-            });
-            invalidate();
-          }}
-        />
+        <UserStatusConfirmation user={user} onClose={() => setConfirm(false)} />
       )}
     </div>
   );

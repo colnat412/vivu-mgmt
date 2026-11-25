@@ -1,6 +1,6 @@
 export function allowedAdminRoute(method: string, path: string): boolean {
   if (method === "GET")
-    return /^(me|overview|users|users\/[a-zA-Z0-9]+(?:\/sessions)?|settings|audit)$/.test(
+    return /^(me|overview|users|users\/[a-zA-Z0-9]+(?:\/sessions)?|settings|audit|login-history)$/.test(
       path,
     );
   if (method === "PATCH")

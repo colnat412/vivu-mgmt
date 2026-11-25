@@ -22,20 +22,41 @@ export interface Page<T> {
 }
 export interface Session {
   id: string;
-  userId: string;
+  clientType: "ADMIN" | "WEB" | "PWA" | "UNKNOWN";
+  browser: string;
+  operatingSystem: string;
+  deviceType: "DESKTOP" | "MOBILE" | "TABLET" | "UNKNOWN";
+  loginMethod: "PASSWORD" | "GOOGLE" | "OTP" | "UNKNOWN";
   createdAt: string;
+  lastRefreshedAt: string | null;
   expiresAt: string;
+  endedAt: string | null;
+  status: "ACTIVE" | "LOGGED_OUT" | "REVOKED" | "EXPIRED" | "ENDED" | "FAILED";
   current: boolean;
 }
-export interface Sessions {
+export interface Sessions extends Page<Session> {
   user: User;
-  items: Session[];
+  activeCount: number;
+  currentSessionActive: boolean;
 }
 export interface Overview {
   users: number;
   activeUsers: number;
   pendingUsers: number;
   disabledUsers: number;
+}
+export interface RecentLogin {
+  id: string;
+  userId: string | null;
+  name: string | null;
+  email: string | null;
+  clientType: Session["clientType"];
+  browser: string;
+  operatingSystem: string;
+  deviceType: Session["deviceType"];
+  loginMethod: Session["loginMethod"];
+  signedInAt: string;
+  outcome: "SUCCESS" | "FAILED";
 }
 export interface Audit {
   id: string;

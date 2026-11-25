@@ -1,7 +1,7 @@
 "use client";
 import { useId, useState } from "react";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
+import { toast } from "@/base/components/ui/toast";
 import {
   Dialog,
   DialogContent,
@@ -19,11 +19,13 @@ export function ConfirmAction({
   hint,
   onClose,
   onConfirm,
+  onCloseAutoFocus,
 }: {
   title: string;
   hint?: string;
   onClose: () => void;
   onConfirm: (reason: string) => Promise<unknown>;
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   const t = useTranslations();
   const descriptionId = useId();
@@ -60,6 +62,7 @@ export function ConfirmAction({
       }}
     >
       <DialogContent
+        onCloseAutoFocus={onCloseAutoFocus}
         aria-describedby={hint ? descriptionId : undefined}
         showCloseButton={!mutation.isPending}
         onInteractOutside={(event) => {

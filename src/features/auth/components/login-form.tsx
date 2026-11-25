@@ -5,9 +5,11 @@ import { useTranslations } from "next-intl";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/base/components/ui/button";
 import { Input } from "@/base/components/ui/input";
+import { toast } from "@/base/components/ui/toast";
 import { Brand, Preferences, Pending } from "@/base/components/layout/common";
 import useMutationRequest from "@/base/hooks/use-mutation-request";
 import { request } from "@/base/api";
+import { loginErrorKey } from "../login-error";
 export function LoginForm() {
   const t = useTranslations();
   const [email, setEmail] = useState("");
@@ -16,7 +18,15 @@ export function LoginForm() {
     mutationKey: ["login"],
     mutationFn: (body: { email: string; password: string }) =>
       request("POST", "/auth/login", body),
-    options: { onSuccess: () => navigateAfterAuth("/") },
+    options: {
+      onSuccess: () => {
+        toast.dismiss("login-error");
+        navigateAfterAuth("/");
+      },
+      onError: (error) => {
+        toast.error(t(loginErrorKey(error)), { id: "login-error" });
+      },
+    },
   });
   return (
     <div className="login">
@@ -58,17 +68,6 @@ export function LoginForm() {
                 disabled={mutation.isPending}
               />
             </label>
-            {mutation.error && (
-              <p className="error-text" role="alert">
-                {t(
-                  mutation.error.status === 503
-                    ? "unavailable"
-                    : mutation.error.message.includes("POLICY")
-                      ? "policyError"
-                      : "loginError",
-                )}
-              </p>
-            )}
             <Button
               size="lg"
               disabled={!email.trim() || !password || mutation.isPending}

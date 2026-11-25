@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { ThemeProvider } from "next-themes";
-import { Toaster } from "sonner";
+import { Toaster } from "@/base/components/ui/toast";
 import type { User } from "@/base/lib/types";
 const AdminContext = createContext<{
   actor: User;
@@ -51,7 +51,7 @@ export function Providers({
     >
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         {children}
-        <Toaster richColors position="bottom-right" />
+        <Toaster />
       </ThemeProvider>
     </NextIntlClientProvider>
   );

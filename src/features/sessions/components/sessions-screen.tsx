@@ -3,7 +3,13 @@ import { navigateAfterAuth } from "@/base/lib/auth-navigation";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Monitor, ArrowRight } from "lucide-react";
+import {
+  Monitor,
+  Smartphone,
+  Tablet,
+  ArrowRight,
+  RefreshCw,
+} from "lucide-react";
 import { Button } from "@/base/components/ui/button";
 import {
   Heading,
@@ -13,6 +19,7 @@ import {
   Empty,
   SearchField,
   Status,
+  Pagination,
   useDate,
 } from "@/base/components/layout/common";
 import { ConfirmAction } from "@/base/components/layout/confirm-action";
@@ -64,7 +71,11 @@ function SessionList({ id }: { id: string }) {
   const date = useDate();
   const router = useRouter();
   const { invalidate } = useAdmin();
-  const query = useAdminQuery<Sessions>("users/" + id + "/sessions");
+  const [page, setPage] = useState(0);
+  const [size, setSize] = useState(20);
+  const query = useAdminQuery<Sessions>(
+    "users/" + id + "/sessions?page=" + page + "&size=" + size,
+  );
   const settings = useAdminQuery<Settings>("settings");
   const [action, setAction] = useState<{
     sid?: string;
@@ -92,7 +103,8 @@ function SessionList({ id }: { id: string }) {
                   <h2>{data.user.name}</h2>
                   <p className="muted small">
                     {data.user.email} ·{" "}
-                    {t("sessionCount", { total: data.items.length })}
+                    {t("sessionCount", { total: data.activeCount })} ·{" "}
+                    {t("sessionHistoryCount", { total: data.totalElements })}
                   </p>
                 </div>
               </div>
@@ -100,17 +112,25 @@ function SessionList({ id }: { id: string }) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => router.push("/sessions")}
+                  onClick={() => void query.refetch().catch(() => undefined)}
+                  aria-label={t("refreshSessions")}
+                >
+                  <RefreshCw size={15} />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push("/users")}
                 >
                   {t("changeUser")}
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!data.items.length}
+                  disabled={!data.activeCount}
                   onClick={() =>
                     setAction({
-                      current: data.items.some((session) => session.current),
+                      current: data.currentSessionActive,
                     })
                   }
                 >
@@ -125,11 +145,18 @@ function SessionList({ id }: { id: string }) {
                 <table>
                   <thead>
                     <tr>
-                      {["sessionId", "created", "expires", "actions"].map(
-                        (key) => (
-                          <th key={key}>{t(key)}</th>
-                        ),
-                      )}
+                      {[
+                        "sessionDevice",
+                        "sessionClient",
+                        "sessionState",
+                        "created",
+                        "sessionRefreshed",
+                        "expires",
+                        "sessionEnded",
+                        "actions",
+                      ].map((key) => (
+                        <th key={key}>{t(key)}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -137,20 +164,57 @@ function SessionList({ id }: { id: string }) {
                       <tr key={session.id}>
                         <td>
                           <div className="row">
-                            <Monitor size={17} className="muted" />
-                            <span title={session.id} className="mono">
-                              {session.id.slice(0, 8)}…{session.id.slice(-4)}
-                            </span>
+                            {session.deviceType === "MOBILE" ? (
+                              <Smartphone size={17} className="muted" />
+                            ) : session.deviceType === "TABLET" ? (
+                              <Tablet size={17} className="muted" />
+                            ) : (
+                              <Monitor size={17} className="muted" />
+                            )}
+                            <div className="stack gap-1">
+                              <span>
+                                {session.browser === "Unknown"
+                                  ? t("sessionUnknown")
+                                  : session.browser}{" "}
+                                ·{" "}
+                                {session.operatingSystem === "Unknown"
+                                  ? t("sessionUnknown")
+                                  : session.operatingSystem}
+                              </span>
+                              <span
+                                title={session.id}
+                                className="mono muted small"
+                              >
+                                {session.id.slice(0, 8)}…{session.id.slice(-4)}
+                              </span>
+                            </div>
                             {session.current && (
                               <span className="status">{t("current")}</span>
                             )}
                           </div>
                         </td>
+                        <td>
+                          <div className="stack gap-1">
+                            <span>
+                              {t("sessionClient" + session.clientType)}
+                            </span>
+                            <span className="muted small">
+                              {t("sessionMethod" + session.loginMethod)}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="status" data-status={session.status}>
+                            {t("sessionState" + session.status)}
+                          </span>
+                        </td>
                         <td>{date(session.createdAt)}</td>
+                        <td>{date(session.lastRefreshedAt)}</td>
                         <td>
                           <div className="stack gap-1">
                             <span>{date(session.expiresAt)}</span>
                             {settings.data &&
+                              session.status === "ACTIVE" &&
                               now !== null &&
                               new Date(session.expiresAt).getTime() - now <
                                 settings.data.sessionWarningMinutes * 60000 && (
@@ -160,19 +224,24 @@ function SessionList({ id }: { id: string }) {
                               )}
                           </div>
                         </td>
+                        <td>{date(session.endedAt)}</td>
                         <td>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              setAction({
-                                sid: session.id,
-                                current: session.current,
-                              })
-                            }
-                          >
-                            {t("revoke")}
-                          </Button>
+                          {session.status === "ACTIVE" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setAction({
+                                  sid: session.id,
+                                  current: session.current,
+                                })
+                              }
+                            >
+                              {t("revoke")}
+                            </Button>
+                          ) : (
+                            <span className="muted">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -180,6 +249,14 @@ function SessionList({ id }: { id: string }) {
                 </table>
               </div>
             )}
+            <Pagination
+              data={data}
+              onPage={setPage}
+              onPageSize={(next) => {
+                setSize(next);
+                setPage(0);
+              }}
+            />
           </>
         )}
       </section>
